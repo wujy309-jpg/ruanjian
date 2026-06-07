@@ -1,6 +1,7 @@
 package com.exam.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
+import com.fasterxml.jackson.annotation.JsonAlias;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import java.time.LocalDateTime;
@@ -38,6 +39,7 @@ public class Question {
     
     @Schema(description = "题目标题内容", 
             example = "以下关于Java面向对象编程的说法正确的是？")
+    @JsonAlias("content")
     private String title;
     
     @Schema(description = "题目类型", 
@@ -52,6 +54,10 @@ public class Question {
     @Schema(description = "题目分类ID", 
             example = "1")
     private Long categoryId;
+
+    @Schema(description = "关联的知识点ID（GenAgent生成题目时使用）", 
+            example = "1")
+    private Long knowledgePointId;
     
     @Schema(description = "题目难度等级", 
             example = "MEDIUM", 
@@ -83,10 +89,12 @@ public class Question {
     
     @Schema(description = "选择题选项列表，包含A、B、C、D等选项")
     @TableField(exist = false)
+    @JsonAlias("options")
     private List<QuestionChoice> choices;
     
     @Schema(description = "题目答案信息，包含正确答案和评分标准")
     @TableField(exist = false)
+    @JsonAlias("answer")
     private QuestionAnswer answer;
     
     @Schema(description = "题目所属分类信息")

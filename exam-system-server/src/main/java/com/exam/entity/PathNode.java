@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
@@ -28,12 +29,14 @@ public class PathNode {
     private Long pathId;
 
     @Schema(description = "节点序号", example = "1")
+    @JsonAlias("order")
     private Integer nodeOrder;
 
     @Schema(description = "节点标题", example = "复习类与对象")
     private String title;
 
     @Schema(description = "学习类型：review-复习，new_learn-新学，reinforce-强化", example = "review")
+    @JsonAlias("type")
     private String nodeType;
 
     @Schema(description = "预估学习时长（分钟）", example = "30")

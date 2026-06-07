@@ -41,6 +41,11 @@ public interface AgentSessionService {
     void deleteSession(Long sessionId);
 
     /**
+     * 根据会话ID获取会话详情
+     */
+    AgentSession getSessionById(Long sessionId);
+
+    /**
      * 根据会话ID和阶段获取消息列表
      */
     List<AgentMessage> getMessagesBySessionAndPhase(Long sessionId, String phase);

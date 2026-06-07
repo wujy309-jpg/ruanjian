@@ -229,6 +229,14 @@ public interface QuestionService extends IService<Question> {
     void incrementQuestionViewCount(Long questionId);
     
     /**
+     * 批量创建题目（事务保护）
+     * GenAgent 批量写入生成的题目，整批在一个事务中，任一条失败则全部回滚
+     *
+     * @param questions 题目实体列表（含 choices/answer）
+     */
+    void batchCreateQuestions(List<Question> questions);
+
+    /**
      * 刷新热门题目缓存
      * 
      * 管理功能：

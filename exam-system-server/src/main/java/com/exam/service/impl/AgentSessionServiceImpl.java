@@ -70,6 +70,15 @@ public class AgentSessionServiceImpl implements AgentSessionService {
     }
 
     @Override
+    public AgentSession getSessionById(Long sessionId) {
+        AgentSession session = agentSessionMapper.selectById(sessionId);
+        if (session == null) {
+            throw new RuntimeException("会话不存在");
+        }
+        return session;
+    }
+
+    @Override
     public List<AgentMessage> getMessagesBySessionAndPhase(Long sessionId, String phase) {
         return agentMessageMapper.selectBySessionIdAndPhase(sessionId, phase);
     }

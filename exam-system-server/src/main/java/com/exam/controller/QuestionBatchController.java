@@ -3,12 +3,16 @@ package com.exam.controller;
 import com.exam.common.Result;
 import com.exam.dto.AiGenerateRequestDto;
 import com.exam.dto.QuestionImportDto;
+import com.exam.entity.Question;
+import com.exam.entity.QuestionAnswer;
+import com.exam.entity.QuestionChoice;
 import com.exam.service.KimiAiService;
 import com.exam.service.QuestionService;
 import com.exam.utils.ExcelUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
@@ -18,6 +22,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -192,6 +197,92 @@ public class QuestionBatchController {
             log.error("批量导入题目失败", e);
             return Result.error("批量导入题目失败: " + e.getMessage());
         }
+    }
+
+    /**
+     * 批量创建题目（契约格式）
+     * GenAgent 通过此接口将生成的题目批量写入数据库
+     * 请求格式：{ "questions": [{ "content": "...", "type": "CHOICE", "options": [...], ... }] }
+     */
+    @PostMapping
+    @Operation(summary = "批量创建题目（Agent写入）", description = "GenAgent批量写入生成的题目。支持契约格式 {questions:[...]}")
+    public Result<String> batchCreateQuestions(@RequestBody QuestionBatchRequest body) {
+        try {
+            List<BatchQuestionDto> dtos = body.getQuestions();
+            if (dtos == null || dtos.isEmpty()) {
+                return Result.error("题目列表不能为空");
+            }
+
+            List<Question> questions = new ArrayList<>();
+            for (BatchQuestionDto dto : dtos) {
+                questions.add(convertFromDto(dto));
+            }
+            questionService.batchCreateQuestions(questions);
+
+            return Result.success("成功写入 " + questions.size() + " 道题目");
+        } catch (Exception e) {
+            log.error("批量创建题目失败", e);
+            return Result.error("批量创建题目失败: " + e.getMessage());
+        }
+    }
+
+    @Data
+    public static class QuestionBatchRequest {
+        private List<BatchQuestionDto> questions;
+    }
+
+    @Data
+    public static class BatchQuestionDto {
+        private String content;      // 题目内容 → Question.title
+        private String type;         // CHOICE / JUDGE / SHORT_ANSWER → Question.type
+        private String difficulty;   // EASY / MEDIUM / HARD
+        private Long knowledgePointId;
+        private Long categoryId;
+        private String analysis;
+        private Integer score;
+        private List<OptionDto> options;  // 选择题选项
+        private String answer;            // 判断题/简答题答案
+    }
+
+    @Data
+    public static class OptionDto {
+        private String content;
+        private Boolean isCorrect;
+        private Integer sort;
+    }
+
+    private Question convertFromDto(BatchQuestionDto dto) {
+        Question q = new Question();
+        q.setTitle(dto.getContent());
+        q.setType("SHORT_ANSWER".equals(dto.getType()) ? "TEXT" : dto.getType());
+        q.setDifficulty(dto.getDifficulty());
+        q.setKnowledgePointId(dto.getKnowledgePointId());
+        q.setCategoryId(dto.getCategoryId());
+        q.setAnalysis(dto.getAnalysis());
+        q.setScore(dto.getScore() != null ? dto.getScore() : 5);
+
+        // 处理选项（选择题）
+        if (dto.getOptions() != null && !dto.getOptions().isEmpty()) {
+            List<QuestionChoice> choices = new ArrayList<>();
+            for (int i = 0; i < dto.getOptions().size(); i++) {
+                OptionDto opt = dto.getOptions().get(i);
+                QuestionChoice choice = new QuestionChoice();
+                choice.setContent(opt.getContent());
+                choice.setIsCorrect(opt.getIsCorrect() != null ? opt.getIsCorrect() : false);
+                choice.setSort(opt.getSort() != null ? opt.getSort() : i + 1);
+                choices.add(choice);
+            }
+            q.setChoices(choices);
+        }
+
+        // 处理答案（判断题/简答题）
+        if (dto.getAnswer() != null) {
+            QuestionAnswer qa = new QuestionAnswer();
+            qa.setAnswer(dto.getAnswer());
+            q.setAnswer(qa);
+        }
+
+        return q;
     }
     
     /**

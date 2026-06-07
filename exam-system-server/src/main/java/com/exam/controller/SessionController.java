@@ -35,9 +35,7 @@ public class SessionController {
     @Operation(summary = "获取会话详情", description = "获取指定会话的详细信息")
     public Result<AgentSession> getSessionById(
             @Parameter(description = "会话ID") @PathVariable Long sessionId) {
-        // 这里需要从数据库查询会话，但Service没有提供单个查询方法
-        // 可以通过其他方式实现，或者添加新方法
-        return Result.error("功能待实现");
+        return Result.success(agentSessionService.getSessionById(sessionId));
     }
 
     @GetMapping("/sessions/{sessionId}/messages")
