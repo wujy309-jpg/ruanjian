@@ -99,6 +99,14 @@ public class QuestionServiceImpl extends ServiceImpl<QuestionMapper, Question> i
         }
     }
 
+    @Override
+    @Transactional
+    public void batchCreateQuestions(List<Question> questions) {
+        for (Question question : questions) {
+            saveQuestionWithDetails(question);
+        }
+    }
+
     /**
      * 更新题目及其详细信息
      * 更新后清除相关缓存

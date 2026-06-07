@@ -126,11 +126,12 @@ public class QuestionController {
      * @return 封装的分页查询结果，包含题目列表和分页信息
      */
     @GetMapping("/list")  // 映射GET请求到/api/questions/list
-    @Operation(summary = "分页查询题目列表", description = "支持按分类、难度、题型、关键词进行多条件筛选的分页查询")  // Swagger接口描述
+    @Operation(summary = "分页查询题目列表", description = "支持按分类、知识点、难度、题型、关键词进行多条件筛选的分页查询")  // Swagger接口描述
     public Result<Page<Question>> getQuestionList(
             @Parameter(description = "当前页码，从1开始", example = "1") @RequestParam(defaultValue = "1") Integer page,  // 参数描述
             @Parameter(description = "每页显示数量", example = "10") @RequestParam(defaultValue = "10") Integer size,
             @Parameter(description = "分类ID筛选条件") @RequestParam(required = false) Long categoryId,
+            @Parameter(description = "知识点ID筛选条件") @RequestParam(required = false) Long knowledgePointId,
             @Parameter(description = "难度筛选条件，可选值：EASY/MEDIUM/HARD") @RequestParam(required = false) String difficulty,
             @Parameter(description = "题型筛选条件，可选值：CHOICE/JUDGE/TEXT") @RequestParam(required = false) String type,
             @Parameter(description = "关键词搜索，对题目标题进行模糊查询") @RequestParam(required = false) String keyword) {
@@ -144,6 +145,11 @@ public class QuestionController {
         // 按分类筛选 - 精确匹配
         if (categoryId != null) {
             queryWrapper.eq("category_id", categoryId);
+        }
+
+        // 按知识点筛选 - 精确匹配
+        if (knowledgePointId != null) {
+            queryWrapper.eq("knowledge_point_id", knowledgePointId);
         }
         
         // 按难度筛选 - 精确匹配

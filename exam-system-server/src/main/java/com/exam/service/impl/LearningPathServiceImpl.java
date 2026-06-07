@@ -1,9 +1,11 @@
 package com.exam.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.exam.entity.KnowledgePoint;
 import com.exam.entity.LearningPath;
 import com.exam.entity.PathNode;
 import com.exam.entity.PathNodeKp;
+import com.exam.mapper.KnowledgePointMapper;
 import com.exam.mapper.LearningPathMapper;
 import com.exam.mapper.PathNodeMapper;
 import com.exam.mapper.PathNodeKpMapper;
@@ -12,7 +14,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 学习路径Service实现类
@@ -29,10 +34,31 @@ public class LearningPathServiceImpl implements LearningPathService {
     @Autowired
     private PathNodeKpMapper pathNodeKpMapper;
 
+    @Autowired
+    private KnowledgePointMapper knowledgePointMapper;
+
     @Override
     @Transactional
     public void createLearningPath(LearningPath path) {
         learningPathMapper.insert(path);
+
+        // 如果请求中带了内联 nodes（对齐接口契约），一并创建节点和知识点关联
+        if (path.getNodes() != null && !path.getNodes().isEmpty()) {
+            for (PathNode node : path.getNodes()) {
+                node.setPathId(path.getId());
+                pathNodeMapper.insert(node);
+
+                // 创建知识点关联
+                if (node.getKnowledgePointIds() != null) {
+                    for (Long kpId : node.getKnowledgePointIds()) {
+                        PathNodeKp pk = new PathNodeKp();
+                        pk.setPathNodeId(node.getId());
+                        pk.setKnowledgePointId(kpId);
+                        pathNodeKpMapper.insert(pk);
+                    }
+                }
+            }
+        }
     }
 
     @Override
@@ -44,6 +70,44 @@ public class LearningPathServiceImpl implements LearningPathService {
 
         // 获取路径节点
         List<PathNode> nodes = pathNodeMapper.selectByPathId(pathId);
+
+        // 收集所有节点 ID，批量查关联知识点
+        if (!nodes.isEmpty()) {
+            List<Long> nodeIds = nodes.stream().map(PathNode::getId).collect(Collectors.toList());
+            List<PathNodeKp> allKps = pathNodeKpMapper.selectList(
+                    new LambdaQueryWrapper<PathNodeKp>().in(PathNodeKp::getPathNodeId, nodeIds)
+            );
+
+            if (!allKps.isEmpty()) {
+                // 批量查知识点
+                List<Long> kpIds = allKps.stream()
+                        .map(PathNodeKp::getKnowledgePointId)
+                        .distinct()
+                        .collect(Collectors.toList());
+                List<KnowledgePoint> knowledgePoints = knowledgePointMapper.selectBatchIds(kpIds);
+
+                // 按节点 ID 分组
+                Map<Long, List<Long>> nodeKpMap = allKps.stream()
+                        .collect(Collectors.groupingBy(
+                                PathNodeKp::getPathNodeId,
+                                Collectors.mapping(PathNodeKp::getKnowledgePointId, Collectors.toList())
+                        ));
+
+                // 填到每个节点上
+                for (PathNode node : nodes) {
+                    List<Long> nodeKpIds = nodeKpMap.get(node.getId());
+                    if (nodeKpIds != null) {
+                        List<KnowledgePoint> nodeKps = knowledgePoints.stream()
+                                .filter(kp -> nodeKpIds.contains(kp.getId()))
+                                .collect(Collectors.toList());
+                        node.setKnowledgePoints(nodeKps);
+                    } else {
+                        node.setKnowledgePoints(new ArrayList<>());
+                    }
+                }
+            }
+        }
+
         path.setNodes(nodes);
         path.setNodeCount(nodes.size());
 

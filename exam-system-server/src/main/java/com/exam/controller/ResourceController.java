@@ -6,6 +6,7 @@ import com.exam.service.GeneratedResourceService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.Data;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -24,10 +25,15 @@ public class ResourceController {
     private GeneratedResourceService generatedResourceService;
 
     @PostMapping
-    @Operation(summary = "批量写入生成资源", description = "批量写入AI生成的学习资源，A的Agent写入资源使用")
-    public Result<Void> batchCreateResources(@RequestBody List<GeneratedResource> resources) {
-        generatedResourceService.batchCreateResources(resources);
+    @Operation(summary = "批量写入生成资源", description = "批量写入AI生成的学习资源，A的Agent写入资源使用。支持契约格式：{resources:[...]}")
+    public Result<Void> batchCreateResources(@RequestBody ResourceBatchRequest body) {
+        generatedResourceService.batchCreateResources(body.getResources());
         return Result.success(null);
+    }
+
+    @Data
+    public static class ResourceBatchRequest {
+        private List<GeneratedResource> resources;
     }
 
     @GetMapping

@@ -28,7 +28,6 @@ public class KnowledgeServiceImpl implements KnowledgeService {
 
     @Override
     public Map<String, Object> getKnowledgeGraph(Long courseId) {
-        // 获取课程信息
         Course course = courseMapper.selectById(courseId);
         if (course == null) {
             throw new RuntimeException("课程不存在");
@@ -40,12 +39,47 @@ public class KnowledgeServiceImpl implements KnowledgeService {
         // 获取该课程的所有依赖关系
         List<KnowledgeEdge> edges = knowledgeEdgeMapper.selectByCourseId(courseId);
 
-        // 构建返回结果
+        // 构建 id → code 映射，用于 edge 的 code 转换
+        Map<Long, String> idToCode = points.stream()
+                .collect(Collectors.toMap(KnowledgePoint::getId, KnowledgePoint::getCode));
+
+        // 为每个知识点填充前置依赖和子知识点
+        Map<Long, List<KnowledgeEdge>> edgesByTarget = edges.stream()
+                .collect(Collectors.groupingBy(KnowledgeEdge::getToKpId));
+
+        // 预先按 parent_id 分组构建 children 映射，避免 N+1 查询
+        Map<Long, List<KnowledgePoint>> childrenByParent = points.stream()
+                .filter(p -> p.getParentId() != null)
+                .collect(Collectors.groupingBy(KnowledgePoint::getParentId));
+
+        for (KnowledgePoint kp : points) {
+            // 填充前置依赖（code 列表）
+            List<KnowledgeEdge> preEdges = edgesByTarget.getOrDefault(kp.getId(), Collections.emptyList());
+            List<String> preCodes = preEdges.stream()
+                    .map(e -> idToCode.get(e.getFromKpId()))
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
+            kp.setPrerequisiteCodes(preCodes);
+
+            // 填充子知识点（从预计算 map 中取，无子节点则为空列表）
+            kp.setChildren(childrenByParent.getOrDefault(kp.getId(), Collections.emptyList()));
+        }
+
+        // 将 edges 转为契约格式（from/to 用 code 字符串）
+        List<Map<String, String>> edgeList = edges.stream()
+                .map(e -> {
+                    Map<String, String> m = new HashMap<>();
+                    m.put("from", idToCode.get(e.getFromKpId()));
+                    m.put("to", idToCode.get(e.getToKpId()));
+                    return m;
+                })
+                .collect(Collectors.toList());
+
         Map<String, Object> result = new HashMap<>();
         result.put("courseId", courseId);
         result.put("courseName", course.getName());
         result.put("points", points);
-        result.put("edges", edges);
+        result.put("edges", edgeList);
 
         return result;
     }
