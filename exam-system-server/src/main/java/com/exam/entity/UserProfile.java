@@ -52,4 +52,18 @@ public class UserProfile {
     @Schema(description = "真实姓名")
     @TableField(exist = false)
     private String realName;
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public Long getUserId() { return userId; }
+    public void setUserId(Long userId) { this.userId = userId; }
+    public com.fasterxml.jackson.databind.JsonNode getDimensions() { return dimensions; }
+    public void setDimensions(com.fasterxml.jackson.databind.JsonNode dimensions) { this.dimensions = dimensions; }
+    public Long getUpdatedBySessionId() { return updatedBySessionId; }
+    public void setUpdatedBySessionId(Long updatedBySessionId) { this.updatedBySessionId = updatedBySessionId; }
+    public java.time.LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(java.time.LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public java.time.LocalDateTime getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(java.time.LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+
 }

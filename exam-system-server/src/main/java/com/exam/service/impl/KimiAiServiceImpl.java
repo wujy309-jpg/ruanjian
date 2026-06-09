@@ -23,9 +23,10 @@ import java.util.List;
  * Kimi AI服务实现类
  * 调用Kimi API智能生成题目
  */
-@Slf4j
+
 @Service
 public class KimiAiServiceImpl implements KimiAiService {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(KimiAiServiceImpl.class);
     
     @Value("${kimi.api.api-key:}")
     private String kimiApiKey; // Kimi API密钥

@@ -67,4 +67,22 @@ public class GeneratedResource {
     @Schema(description = "路径节点标题")
     @TableField(exist = false)
     private String pathNodeTitle;
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public Long getPathNodeId() { return pathNodeId; }
+    public void setPathNodeId(Long pathNodeId) { this.pathNodeId = pathNodeId; }
+    public Long getKnowledgePointId() { return knowledgePointId; }
+    public void setKnowledgePointId(Long knowledgePointId) { this.knowledgePointId = knowledgePointId; }
+    public String getResourceType() { return resourceType; }
+    public void setResourceType(String resourceType) { this.resourceType = resourceType; }
+    public String getTitle() { return title; }
+    public void setTitle(String title) { this.title = title; }
+    public com.fasterxml.jackson.databind.JsonNode getContentJson() { return contentJson; }
+    public void setContentJson(com.fasterxml.jackson.databind.JsonNode contentJson) { this.contentJson = contentJson; }
+    public String getDifficulty() { return difficulty; }
+    public void setDifficulty(String difficulty) { this.difficulty = difficulty; }
+    public java.time.LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(java.time.LocalDateTime createdAt) { this.createdAt = createdAt; }
+
 }

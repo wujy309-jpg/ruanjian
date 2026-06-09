@@ -65,4 +65,24 @@ public class LearningPath {
     @Schema(description = "已完成节点数")
     @TableField(exist = false)
     private Integer completedNodeCount;
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public Long getUserId() { return userId; }
+    public void setUserId(Long userId) { this.userId = userId; }
+    public Long getCourseId() { return courseId; }
+    public void setCourseId(Long courseId) { this.courseId = courseId; }
+    public Long getSessionId() { return sessionId; }
+    public void setSessionId(Long sessionId) { this.sessionId = sessionId; }
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
+    public java.time.LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(java.time.LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public java.time.LocalDateTime getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(java.time.LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+    public java.util.List<PathNode> getNodes() { return nodes; }
+    public void setNodes(java.util.List<PathNode> nodes) { this.nodes = nodes; }
+    public Integer getNodeCount() { return nodeCount; }
+    public void setNodeCount(Integer nodeCount) { this.nodeCount = nodeCount; }
+
 }

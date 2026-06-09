@@ -78,4 +78,24 @@ public class KnowledgePoint {
     @Schema(description = "课程名称")
     @TableField(exist = false)
     private String courseName;
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public Long getCourseId() { return courseId; }
+    public void setCourseId(Long courseId) { this.courseId = courseId; }
+    public Long getParentId() { return parentId; }
+    public void setParentId(Long parentId) { this.parentId = parentId; }
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+    public String getCode() { return code; }
+    public void setCode(String code) { this.code = code; }
+    public String getDifficulty() { return difficulty; }
+    public void setDifficulty(String difficulty) { this.difficulty = difficulty; }
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
+    public java.util.List<KnowledgePoint> getChildren() { return children; }
+    public void setChildren(java.util.List<KnowledgePoint> children) { this.children = children; }
+    public java.util.List<String> getPrerequisiteCodes() { return prerequisiteCodes; }
+    public void setPrerequisiteCodes(java.util.List<String> prerequisiteCodes) { this.prerequisiteCodes = prerequisiteCodes; }
+
 }

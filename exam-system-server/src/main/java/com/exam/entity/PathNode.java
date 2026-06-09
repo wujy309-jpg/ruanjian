@@ -69,4 +69,28 @@ public class PathNode {
     @Schema(description = "该节点的生成资源列表")
     @TableField(exist = false)
     private List<GeneratedResource> resources;
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public Long getPathId() { return pathId; }
+    public void setPathId(Long pathId) { this.pathId = pathId; }
+    public Integer getNodeOrder() { return nodeOrder; }
+    public void setNodeOrder(Integer nodeOrder) { this.nodeOrder = nodeOrder; }
+    public String getTitle() { return title; }
+    public void setTitle(String title) { this.title = title; }
+    public String getNodeType() { return nodeType; }
+    public void setNodeType(String nodeType) { this.nodeType = nodeType; }
+    public Integer getEstimatedMinutes() { return estimatedMinutes; }
+    public void setEstimatedMinutes(Integer estimatedMinutes) { this.estimatedMinutes = estimatedMinutes; }
+    public String getReason() { return reason; }
+    public void setReason(String reason) { this.reason = reason; }
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
+    public java.time.LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(java.time.LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public java.util.List<KnowledgePoint> getKnowledgePoints() { return knowledgePoints; }
+    public void setKnowledgePoints(java.util.List<KnowledgePoint> knowledgePoints) { this.knowledgePoints = knowledgePoints; }
+    public java.util.List<Long> getKnowledgePointIds() { return knowledgePointIds; }
+    public void setKnowledgePointIds(java.util.List<Long> knowledgePointIds) { this.knowledgePointIds = knowledgePointIds; }
+
 }
