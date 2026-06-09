@@ -12,6 +12,12 @@ const routes = [
     meta: { title: '首页' }
   },
   {
+    path: '/agent-chat',
+    name: 'AgentChat',
+    component: () => import('../views/AgentChat.vue'),
+    meta: { title: 'AI学习助手' }
+  },
+  {
     path: '/videos',
     name: 'VideoList',
     component: () => import('../views/VideoList.vue'),

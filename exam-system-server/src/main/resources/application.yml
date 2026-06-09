@@ -24,7 +24,7 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver  # MySQL驱动
     url: jdbc:mysql://localhost:3306/exam_system?useUnicode=true&characterEncoding=utf8&allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=Asia/Shanghai  # 数据库连接URL
     username: root  # 数据库用户名
-    password: 132200  # 数据库密码
+    password: 12345678  # 数据库密码
   
   # Jackson配置
   jackson:

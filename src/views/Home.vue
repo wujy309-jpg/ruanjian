@@ -18,21 +18,29 @@
 
       <div class="feature-section">
         <el-row :gutter="20">
-          <el-col :span="8">
+          <el-col :span="6">
+            <div class="feature-card ai-entry" @click="goToAgentChat">
+              <el-icon :size="48" color="#409EFF"><Cpu /></el-icon>
+              <h3>AI 学习助手</h3>
+              <p>个性化学习画像 · 智能路径规划 · 多模态资源</p>
+              <el-tag type="danger" size="small" effect="dark">NEW</el-tag>
+            </div>
+          </el-col>
+          <el-col :span="6">
             <div class="feature-card">
               <el-icon :size="48" color="#409EFF"><ChatDotRound /></el-icon>
               <h3>智能对话</h3>
               <p>通过自然对话了解你的知识水平和学习偏好</p>
             </div>
           </el-col>
-          <el-col :span="8">
+          <el-col :span="6">
             <div class="feature-card">
               <el-icon :size="48" color="#67C23A"><Guide /></el-icon>
               <h3>学习路径</h3>
               <p>多智能体协同规划个性化学习路径</p>
             </div>
           </el-col>
-          <el-col :span="8">
+          <el-col :span="6">
             <div class="feature-card">
               <el-icon :size="48" color="#E6A23C"><Document /></el-icon>
               <h3>资源生成</h3>
@@ -64,6 +72,7 @@
 <script setup>
 import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
+import { Cpu } from "@element-plus/icons-vue";
 import request from "../utils/request";
 
 const router = useRouter();
@@ -80,6 +89,7 @@ const getLatestVideos = async () => {
 
 const goToVideos = () => router.push("/videos");
 const goToVideoDetail = (id) => router.push(`/videos/${id}`);
+const goToAgentChat = () => router.push("/agent-chat");
 
 onMounted(() => {
   getLatestVideos();
@@ -142,6 +152,21 @@ onMounted(() => {
   text-align: center;
   box-shadow: 0 2px 12px rgba(0,0,0,0.06);
   transition: transform 0.2s;
+  position: relative;
+}
+.feature-card.ai-entry {
+  cursor: pointer;
+  border: 2px solid #d9ecff;
+  background: linear-gradient(135deg, #ecf5ff 0%, #fff 100%);
+}
+.feature-card.ai-entry:hover {
+  border-color: #409EFF;
+  box-shadow: 0 4px 20px rgba(64, 158, 255, 0.15);
+}
+.feature-card.ai-entry .el-tag {
+  position: absolute;
+  top: 12px;
+  right: 12px;
 }
 .feature-card:hover {
   transform: translateY(-4px);

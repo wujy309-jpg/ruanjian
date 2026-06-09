@@ -59,6 +59,10 @@ public class Question {
             example = "1")
     private Long knowledgePointId;
     
+    @Schema(description = "关联的知识点ID", 
+            example = "1")
+    private Long knowledgePointId;
+    
     @Schema(description = "题目难度等级", 
             example = "MEDIUM", 
             allowableValues = {"EASY", "MEDIUM", "HARD"})

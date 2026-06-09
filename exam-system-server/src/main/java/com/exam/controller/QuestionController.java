@@ -152,6 +152,11 @@ public class QuestionController {
             queryWrapper.eq("knowledge_point_id", knowledgePointId);
         }
         
+        // 按知识点筛选 - 精确匹配
+        if (knowledgePointId != null) {
+            queryWrapper.eq("knowledge_point_id", knowledgePointId);
+        }
+        
         // 按难度筛选 - 精确匹配
         if (difficulty != null && !difficulty.isEmpty()) {
             queryWrapper.eq("difficulty", difficulty);

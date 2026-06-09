@@ -14,7 +14,7 @@ export default defineConfig({
     assetsDir: 'static' // 静态资源目录
   },
   server: {
-    port: 3001, // 前端服务端口
+    port: 3080, // 前端服务端口
     //现在配置的绝对地址，不走代理！后台处理跨域
     proxy: {
       '/api': {
