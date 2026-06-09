@@ -27,8 +27,11 @@ CREATE TABLE IF NOT EXISTS `video_categories` (
   `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
   `name` VARCHAR(100) NOT NULL COMMENT '分类名称',
   `description` VARCHAR(500) COMMENT '分类描述',
-  `sort_order` INT DEFAULT 0 COMMENT '排序',
-  `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP
+  `parent_id` BIGINT DEFAULT 0 COMMENT '父级分类ID，0为顶级分类',
+  `sort_order` INT DEFAULT 0 COMMENT '排序权重',
+  `status` INT DEFAULT 1 COMMENT '状态：1-启用，0-禁用',
+  `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
 ) COMMENT '视频分类';
 
 CREATE TABLE IF NOT EXISTS `video_likes` (
