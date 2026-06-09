@@ -27,21 +27,21 @@
             </div>
           </el-col>
           <el-col :span="6">
-            <div class="feature-card">
+            <div class="feature-card" @click="goToAgentChat">
               <el-icon :size="48" color="#409EFF"><ChatDotRound /></el-icon>
               <h3>智能对话</h3>
               <p>通过自然对话了解你的知识水平和学习偏好</p>
             </div>
           </el-col>
           <el-col :span="6">
-            <div class="feature-card">
+            <div class="feature-card" @click="goToLearningPaths">
               <el-icon :size="48" color="#67C23A"><Guide /></el-icon>
               <h3>学习路径</h3>
               <p>多智能体协同规划个性化学习路径</p>
             </div>
           </el-col>
           <el-col :span="6">
-            <div class="feature-card">
+            <div class="feature-card" @click="goToResources">
               <el-icon :size="48" color="#E6A23C"><Document /></el-icon>
               <h3>资源生成</h3>
               <p>自动生成文档、思维导图、练习题等学习资源</p>
@@ -90,6 +90,8 @@ const getLatestVideos = async () => {
 const goToVideos = () => router.push("/videos");
 const goToVideoDetail = (id) => router.push(`/videos/${id}`);
 const goToAgentChat = () => router.push("/agent-chat");
+const goToLearningPaths = () => router.push("/learning-paths");
+const goToResources = () => router.push("/resources");
 
 onMounted(() => {
   getLatestVideos();
@@ -153,6 +155,7 @@ onMounted(() => {
   box-shadow: 0 2px 12px rgba(0,0,0,0.06);
   transition: transform 0.2s;
   position: relative;
+  cursor: pointer;
 }
 .feature-card.ai-entry {
   cursor: pointer;

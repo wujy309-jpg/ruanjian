@@ -18,6 +18,18 @@ const routes = [
     meta: { title: 'AI学习助手' }
   },
   {
+    path: '/learning-paths',
+    name: 'LearningPaths',
+    component: () => import('../views/LearningPaths.vue'),
+    meta: { title: '学习路径' }
+  },
+  {
+    path: '/resources',
+    name: 'Resources',
+    component: () => import('../views/Resources.vue'),
+    meta: { title: '生成资源' }
+  },
+  {
     path: '/videos',
     name: 'VideoList',
     component: () => import('../views/VideoList.vue'),
