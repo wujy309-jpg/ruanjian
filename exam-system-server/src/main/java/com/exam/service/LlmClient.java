@@ -22,10 +22,10 @@ public class LlmClient {
     @Value("${kimi.api.api-key:}")
     private String apiKey;
 
-    @Value("${kimi.api.base-url:https://api.moonshot.cn/v1}")
+    @Value("${kimi.api.base-url:https://api.xiaomimimo.com/v1}")
     private String baseUrl;
 
-    @Value("${kimi.api.model:moonshot-v1-32k}")
+    @Value("${kimi.api.model:mimo-v2.5-pro}")
     private String model;
 
     private final WebClient webClient = WebClient.builder()

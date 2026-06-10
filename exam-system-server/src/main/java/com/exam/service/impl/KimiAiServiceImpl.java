@@ -31,10 +31,10 @@ public class KimiAiServiceImpl implements KimiAiService {
     @Value("${kimi.api.api-key:}")
     private String kimiApiKey; // Kimi API密钥
     
-    @Value("${kimi.api.base-url:https://api.moonshot.cn/v1}")
+    @Value("${kimi.api.base-url:https://api.xiaomimimo.com/v1}")
     private String kimiBaseUrl; // Kimi API基础地址
     
-    @Value("${kimi.api.model:moonshot-v1-8k}")
+    @Value("${kimi.api.model:mimo-v2.5-pro}")
     private String kimiModel; // 使用的模型
     
     private final WebClient webClient;

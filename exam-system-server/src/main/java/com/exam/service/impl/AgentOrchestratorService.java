@@ -33,13 +33,16 @@ public class AgentOrchestratorService {
     @Autowired private LearningPathService learningPathService;
     @Autowired private GeneratedResourceService generatedResourceService;
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
 
     private static final String PROFILING_PROMPT = "你是一个学习画像构建助手。通过对话了解用户的学习水平和偏好。\n" +
-            "每次只问一个问题。问完3-4个问题后输出画像JSON。\n" +
-            "需要了解：编程基础、学习目标、学习偏好、每周时长。\n" +
-            "还在提问时返回：{\"status\":\"profiling\",\"type\":\"question\",\"text\":\"问题\",\"options\":[\"选项1\",\"选项2\"]}\n" +
-            "画像完成时返回：{\"status\":\"complete\",\"profile\":{\"level\":\"初级\",\"knowledge_map\":{...},\"cognitive_style\":{...},\"weak_points\":[...],\"learning_goal\":{...}}}";
+            "规则（必须严格遵守）：\n" +
+            "1. 每次只问一个问题\n" +
+            "2. 总共只问恰好3个问题，不能多也不能少\n" +
+            "3. 前2个问题返回状态profiling，第3个问题用户回答后，第4次调用时必须返回status:complete\n" +
+            "4. 需要了解：编程基础、学习目标、每周学习时长\n" +
+            "还在提问时返回：{\"status\":\"profiling\",\"type\":\"question\",\"text\":\"问题\",\"options\":[\"选项1\",\"选项2\",\"选项3\",\"选项4\"]}\n" +
+            "画像完成时（第3个问题回答后）必须返回：{\"status\":\"complete\",\"profile\":{\"level\":\"初级|中级|高级\",\"knowledge_map\":{\"java_basics\":{\"level\":0.5,\"label\":\"Java基础\"}},\"cognitive_style\":{\"type\":\"depth_first\",\"avg_session_min\":30},\"weak_points\":[{\"topic\":\"薄弱点\",\"level\":0.3}],\"learning_goal\":{\"target\":\"学习目标\"}}>";
 
     private static final String PLANNING_PROMPT = "你是学习路径规划助手。根据用户画像和知识图谱生成学习路径。\n" +
             "返回格式：{\"title\":\"路径标题\",\"courseId\":1,\"nodes\":[{\"order\":1,\"title\":\"节点标题\",\"type\":\"review|new_learn|reinforce\",\"estimatedMinutes\":30,\"reason\":\"原因\",\"knowledgePointIds\":[1,2]}]}";
@@ -116,7 +119,42 @@ public class AgentOrchestratorService {
     }
 
     private void handleProfiling(AgentSession session, List<AgentMessage> history, SseEmitter emitter) throws Exception {
-        sendPhase(emitter, "profiling", 0.15, null);
+        sendPhase(emitter, "profiling", 0.15, null, session.getId());
+
+        // 硬性限制：用户消息超过3条就强制完成画像
+        long userMsgCount = history.stream().filter(m -> "user".equals(m.getRole())).count();
+        if (userMsgCount >= 3) {
+            log.info("Session {} profiling forced complete after {} user messages", session.getId(), userMsgCount);
+            // 构建一个简单的画像直接完成
+            JSONObject forcedProfile = new JSONObject();
+            forcedProfile.put("status", "complete");
+            JSONObject profileData = new JSONObject();
+            profileData.put("level", "初级");
+            JSONObject knowledgeMap = new JSONObject();
+            JSONObject javaBasics = new JSONObject();
+            javaBasics.put("level", 0.5);
+            javaBasics.put("label", "Java基础");
+            knowledgeMap.put("java_basics", javaBasics);
+            profileData.put("knowledge_map", knowledgeMap);
+            JSONObject cognitiveStyle = new JSONObject();
+            cognitiveStyle.put("type", "depth_first");
+            cognitiveStyle.put("avg_session_min", 30);
+            profileData.put("cognitive_style", cognitiveStyle);
+            profileData.put("weak_points", new JSONArray());
+            JSONObject learningGoal = new JSONObject();
+            learningGoal.put("target", "学习Java");
+            profileData.put("learning_goal", learningGoal);
+            forcedProfile.put("profile", profileData);
+
+            saveProfile(session.getUserId(), profileData, session.getId());
+            saveMessage(session.getId(), forcedProfile.toJSONString(), "profiling");
+
+            sendPhase(emitter, "profiling", 0.30,
+                    Map.of("type", "text", "text", "已完成学习画像构建！正在为您规划学习路径..."), session.getId());
+            Thread.sleep(500);
+            handlePlanning(session, session.getUserId(), emitter);
+            return;
+        }
 
         List<Map<String, String>> messages = history.stream()
                 .filter(m -> !"system".equals(m.getRole()))
@@ -134,7 +172,7 @@ public class AgentOrchestratorService {
             saveMessage(session.getId(), response, "profiling");
 
             sendPhase(emitter, "profiling", 0.30,
-                    Map.of("type", "text", "text", "已完成学习画像构建！正在为您规划学习路径..."));
+                    Map.of("type", "text", "text", "已完成学习画像构建！正在为您规划学习路径..."), session.getId());
             Thread.sleep(500);
             handlePlanning(session, session.getUserId(), emitter);
         } else {
@@ -147,12 +185,12 @@ public class AgentOrchestratorService {
             if (parsed.containsKey("options")) {
                 content.put("options", parsed.getJSONArray("options"));
             }
-            sendPhase(emitter, "profiling", 0.20, content);
+            sendPhase(emitter, "profiling", 0.20, content, session.getId());
         }
     }
 
     private void handlePlanning(AgentSession session, Long userId, SseEmitter emitter) throws Exception {
-        sendPhase(emitter, "planning", 0.40, Map.of("summary", "正在为您规划学习路径..."));
+        sendPhase(emitter, "planning", 0.40, Map.of("summary", "正在为您规划学习路径..."), session.getId());
 
         Map<String, Object> graph = knowledgeService.getKnowledgeGraph(1L);
         String graphJson = objectMapper.writeValueAsString(graph);
@@ -189,7 +227,7 @@ public class AgentOrchestratorService {
         learningPathService.createLearningPath(path);
 
         saveMessage(session.getId(), response, "planning");
-        sendPhase(emitter, "planning", 0.50, Map.of("summary", "已生成学习路径，共" + nodes.size() + "个节点"));
+        sendPhase(emitter, "planning", 0.50, Map.of("summary", "已生成学习路径，共" + nodes.size() + "个节点"), session.getId());
         Thread.sleep(500);
         handleGenerating(session, userId, emitter);
     }
@@ -197,7 +235,7 @@ public class AgentOrchestratorService {
     private void handleGenerating(AgentSession session, Long userId, SseEmitter emitter) throws Exception {
         List<LearningPath> paths = learningPathService.getLearningPathsByUser(userId);
         if (paths.isEmpty()) {
-            sendPhase(emitter, "generating", 0.60, Map.of("chapter_title", "暂无学习路径", "current", 0, "total", 0));
+            sendPhase(emitter, "generating", 0.60, Map.of("chapter_title", "暂无学习路径", "current", 0, "total", 0), session.getId());
             return;
         }
 
@@ -205,13 +243,13 @@ public class AgentOrchestratorService {
         LearningPath detail = learningPathService.getLearningPathDetail(latestPath.getId());
         List<PathNode> nodes = detail.getNodes();
 
-        sendPhase(emitter, "generating", 0.55, Map.of("chapter_title", "开始生成学习资料", "current", 0, "total", nodes.size()));
+        sendPhase(emitter, "generating", 0.55, Map.of("chapter_title", "开始生成学习资料", "current", 0, "total", nodes.size()), session.getId());
 
         for (int i = 0; i < nodes.size(); i++) {
             PathNode node = nodes.get(i);
             double progress = 0.55 + (0.40 * (i + 1) / nodes.size());
             sendPhase(emitter, "generating", progress,
-                    Map.of("chapter_title", "第" + (i + 1) + "章：" + node.getTitle(), "current", i + 1, "total", nodes.size()));
+                    Map.of("chapter_title", "第" + (i + 1) + "章：" + node.getTitle(), "current", i + 1, "total", nodes.size()), session.getId());
 
             String kpInfo = "";
             if (node.getKnowledgePoints() != null) {
@@ -292,10 +330,11 @@ public class AgentOrchestratorService {
         agentMessageMapper.insert(msg);
     }
 
-    private void sendPhase(SseEmitter emitter, String phase, double progress, Object content) throws IOException {
+    private void sendPhase(SseEmitter emitter, String phase, double progress, Object content, Long sessionId) throws IOException {
         Map<String, Object> data = new HashMap<>();
         data.put("phase", phase);
         data.put("progress", progress);
+        if (sessionId != null) data.put("sessionId", sessionId);
         if (content != null) data.put("content", content);
         emitter.send(SseEmitter.event().name("phase").data(objectMapper.writeValueAsString(data)));
     }

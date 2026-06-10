@@ -49,18 +49,4 @@ public class AiGenerateRequestDto {
     @Schema(description = "额外的生成要求和说明", 
             example = "重点考察实际应用，包含代码示例")
     private String requirements; // 额外要求，如"重点考察实际应用"
-} 
-    public String getTopic() { return topic; }
-    public void setTopic(String topic) { this.topic = topic; }
-    public Integer getCount() { return count; }
-    public void setCount(Integer count) { this.count = count; }
-    public String getTypes() { return types; }
-    public void setTypes(String types) { this.types = types; }
-    public String getDifficulty() { return difficulty; }
-    public void setDifficulty(String difficulty) { this.difficulty = difficulty; }
-    public Long getCategoryId() { return categoryId; }
-    public void setCategoryId(Long categoryId) { this.categoryId = categoryId; }
-    public Boolean getIncludeMultiple() { return includeMultiple; }
-    public void setIncludeMultiple(Boolean includeMultiple) { this.includeMultiple = includeMultiple; }
-    public String getRequirements() { return requirements; }
-    public void setRequirements(String requirements) { this.requirements = requirements; }
+}

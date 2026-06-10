@@ -57,12 +57,12 @@ logging:
     com.exam: debug  # 项目包路径的日志级别
     org.springframework.web: debug  # Spring Web日志级别 
 
-# AI 服务配置
+# AI 服务配置 (小米 MiMo API)
 kimi:
   api:
-    base-url: https://api.moonshot.cn/v1
-    api-key: 你的kimiAPI-key  # 从环境变量获取，或使用默认值
-    model: moonshot-v1-32k  # 使用8k上下文模型进行判卷
+    base-url: https://token-plan-cn.xiaomimimo.com/v1  # 小米MiMo API地址（兼容OpenAI格式）
+    api-key: tp-csbrteoq2m9h4gfxm66p6y8nhy3so6s15wvgy49zr0elg3pk  # 在 https://platform.xiaomimimo.com 控制台获取
+    model: mimo-v2.5-pro  # 小米MiMo模型
     max-tokens: 2000  # 最大生成token数
     temperature: 0.3  # 较低的temperature确保判卷结果稳定
 
