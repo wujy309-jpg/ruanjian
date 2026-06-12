@@ -30,6 +30,11 @@ public interface GeneratedResourceService {
     GeneratedResource getResourceById(Long id);
 
     /**
+     * 根据标题模糊查找资源
+     */
+    List<GeneratedResource> getResourcesByTitle(String title);
+
+    /**
      * 删除资源
      */
     void deleteResource(Long id);

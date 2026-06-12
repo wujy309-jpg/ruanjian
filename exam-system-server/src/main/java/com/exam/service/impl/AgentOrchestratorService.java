@@ -41,11 +41,18 @@ public class AgentOrchestratorService {
             "2. 总共只问恰好3个问题，不能多也不能少\n" +
             "3. 前2个问题返回状态profiling，第3个问题用户回答后，第4次调用时必须返回status:complete\n" +
             "4. 需要了解：编程基础、学习目标、每周学习时长\n" +
-            "还在提问时返回：{\"status\":\"profiling\",\"type\":\"question\",\"text\":\"问题\",\"options\":[\"选项1\",\"选项2\",\"选项3\",\"选项4\"]}\n" +
+            "5. 每个问题提供4个快捷选项，同时允许用户自由输入\n" +
+            "6. 认真理解用户的自由输入回答，提取关键信息\n\n" +
+            "还在提问时返回：{\"status\":\"profiling\",\"type\":\"question\",\"text\":\"问题\",\"options\":[\"选项1\",\"选项2\",\"选项3\",\"选项4\"],\"placeholder\":\"提示用户可以自由输入\"}\n" +
             "画像完成时（第3个问题回答后）必须返回：{\"status\":\"complete\",\"profile\":{\"level\":\"初级|中级|高级\",\"knowledge_map\":{\"java_basics\":{\"level\":0.5,\"label\":\"Java基础\"}},\"cognitive_style\":{\"type\":\"depth_first\",\"avg_session_min\":30},\"weak_points\":[{\"topic\":\"薄弱点\",\"level\":0.3}],\"learning_goal\":{\"target\":\"学习目标\"}}>";
 
     private static final String PLANNING_PROMPT = "你是学习路径规划助手。根据用户画像和知识图谱生成学习路径。\n" +
-            "返回格式：{\"title\":\"路径标题\",\"courseId\":1,\"nodes\":[{\"order\":1,\"title\":\"节点标题\",\"type\":\"review|new_learn|reinforce\",\"estimatedMinutes\":30,\"reason\":\"原因\",\"knowledgePointIds\":[1,2]}]}";
+            "规则：\n" +
+            "1. 根据用户水平选择合适的起点\n" +
+            "2. 按依赖关系排序\n" +
+            "3. 每个节点20-50分钟\n" +
+            "4. 最多10个节点\n" +
+            "返回JSON：{\"courseId\":1,\"nodes\":[{\"order\":1,\"title\":\"标题\",\"type\":\"new_learn\",\"estimatedMinutes\":30,\"reason\":\"原因\"}]}";
 
     private static final String RESOURCE_PROMPT = "你是学习资源生成助手。根据要求生成学习资料。\n" +
             "文档：{\"type\":\"document\",\"title\":\"标题\",\"content\":\"# 标题\\n\\nMarkdown内容\"}\n" +
@@ -192,13 +199,15 @@ public class AgentOrchestratorService {
     private void handlePlanning(AgentSession session, Long userId, SseEmitter emitter) throws Exception {
         sendPhase(emitter, "planning", 0.40, Map.of("summary", "正在为您规划学习路径..."), session.getId());
 
+        // 只获取精简的图谱结构，不包含完整的description
         Map<String, Object> graph = knowledgeService.getKnowledgeGraph(1L);
-        String graphJson = objectMapper.writeValueAsString(graph);
+        String graphJson = buildSimplifiedGraphJson(graph);
 
         UserProfile profile = userProfileService.getUserProfile(userId);
         String profileJson = profile != null ? objectMapper.writeValueAsString(profile) : "{}";
 
-        String prompt = "用户画像：\n" + profileJson + "\n\n知识图谱：\n" + graphJson;
+        String prompt = "用户画像：\n" + profileJson + "\n\n知识图谱（精简版）：\n" + graphJson;
+        log.info("Planning prompt length: {} chars", prompt.length());
         String response = llmClient.chat(PLANNING_PROMPT, List.of(Map.of("role", "user", "content", prompt)));
 
         String jsonStr = extractJson(response);
@@ -258,9 +267,16 @@ public class AgentOrchestratorService {
                         .collect(Collectors.joining("\n"));
             }
 
-            genResource(session.getId(), node, "document", kpInfo);
-            genResource(session.getId(), node, "quiz", kpInfo);
-            genResource(session.getId(), node, "mindmap", kpInfo);
+            // 并行生成三种资源，加快速度
+            final String finalKpInfo = kpInfo;
+            final PathNode finalNode = node;
+            CompletableFuture<Void> docFuture = CompletableFuture.runAsync(() ->
+                genResource(session.getId(), finalNode, "document", finalKpInfo), executorService);
+            CompletableFuture<Void> quizFuture = CompletableFuture.runAsync(() ->
+                genResource(session.getId(), finalNode, "quiz", finalKpInfo), executorService);
+            CompletableFuture<Void> mindmapFuture = CompletableFuture.runAsync(() ->
+                genResource(session.getId(), finalNode, "mindmap", finalKpInfo), executorService);
+            CompletableFuture.allOf(docFuture, quizFuture, mindmapFuture).join();
         }
 
         saveMessage(session.getId(), "学习资料生成完成", "done");
@@ -328,6 +344,47 @@ public class AgentOrchestratorService {
         msg.setPhase(phase);
         msg.setCreatedAt(LocalDateTime.now());
         agentMessageMapper.insert(msg);
+    }
+
+    /**
+     * 构建精简的知识图谱JSON，只包含必要信息，减少prompt长度
+     */
+    @SuppressWarnings("unchecked")
+    private String buildSimplifiedGraphJson(Map<String, Object> graph) {
+        try {
+            JSONObject simplified = new JSONObject();
+            simplified.put("courseId", graph.get("courseId"));
+            simplified.put("courseName", graph.get("courseName"));
+
+            // 精简知识点，只保留关键字段
+            List<Map<String, Object>> points = (List<Map<String, Object>>) graph.get("points");
+            JSONArray simplifiedPoints = new JSONArray();
+            if (points != null) {
+                for (Map<String, Object> p : points) {
+                    JSONObject sp = new JSONObject();
+                    sp.put("id", p.get("id"));
+                    sp.put("code", p.get("code"));
+                    sp.put("name", p.get("name"));
+                    sp.put("difficulty", p.get("difficulty"));
+                    sp.put("keywords", p.get("keywords"));
+                    // 不包含description和children，减少数据量
+                    simplifiedPoints.add(sp);
+                }
+            }
+            simplified.put("points", simplifiedPoints);
+
+            // 保留边关系
+            simplified.put("edges", graph.get("edges"));
+
+            return simplified.toJSONString();
+        } catch (Exception e) {
+            log.warn("Failed to build simplified graph, using original", e);
+            try {
+                return objectMapper.writeValueAsString(graph);
+            } catch (Exception ex) {
+                return "{}";
+            }
+        }
     }
 
     private void sendPhase(SseEmitter emitter, String phase, double progress, Object content, Long sessionId) throws IOException {

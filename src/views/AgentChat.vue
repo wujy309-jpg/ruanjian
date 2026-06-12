@@ -12,12 +12,38 @@
     </div>
 
     <div class="chat-layout">
-      <div class="chat-main">
-        <div class="chat-header">
-          <h2>AI 学习助手</h2>
+      <!-- 左侧：历史对话列表 -->
+      <div class="sidebar">
+        <div class="sidebar-header">
+          <h3>历史对话</h3>
           <el-button text size="small" @click="handleNewChat" :disabled="store.isStreaming">
             <el-icon><Plus /></el-icon> 新对话
           </el-button>
+        </div>
+        <div class="session-list">
+          <div
+            v-for="session in sessions"
+            :key="session.id"
+            class="session-item"
+            :class="{ active: store.sessionId === session.id }"
+            @click="loadSession(session)"
+          >
+            <div class="session-title">{{ session.title || '对话 #' + session.id }}</div>
+            <div class="session-meta">
+              <el-tag size="small" :type="session.status === 'completed' ? 'success' : 'primary'">
+                {{ session.status === 'completed' ? '已完成' : '进行中' }}
+              </el-tag>
+              <span class="session-time">{{ formatTime(session.createdAt) }}</span>
+            </div>
+          </div>
+          <el-empty v-if="sessions.length === 0" description="暂无历史对话" :image-size="40" />
+        </div>
+      </div>
+
+      <!-- 右侧：聊天区域 -->
+      <div class="chat-main">
+        <div class="chat-header">
+          <h2>AI 学习助手</h2>
         </div>
 
         <PhaseIndicator :phase="store.currentPhase" :progress="store.progress" />
@@ -108,7 +134,7 @@
 import { ref, watch, nextTick, onMounted } from 'vue'
 import { Plus, Cpu, Loading, Close } from '@element-plus/icons-vue'
 import { useAgentStore } from '@/stores/agent'
-import { sendMessage, fetchProfile, fetchLearningPathsByUser, fetchNodeResources } from '@/api/agent'
+import { sendMessage, fetchProfile, fetchLearningPathsByUser, fetchNodeResources, fetchSessions, fetchSessionMessages } from '@/api/agent'
 import ChatMessage from '@/components/agent/ChatMessage.vue'
 import ChatInput from '@/components/agent/ChatInput.vue'
 import PhaseIndicator from '@/components/agent/PhaseIndicator.vue'
@@ -121,6 +147,7 @@ import ResourceMindmap from '@/components/agent/ResourceMindmap.vue'
 const store = useAgentStore()
 const messagesRef = ref(null)
 const activeResourceTab = ref('path')
+const sessions = ref([])
 
 const quickPrompts = [
   '我想学Java',
@@ -128,6 +155,64 @@ const quickPrompts = [
   '我要准备Java面试',
   '帮我规划数据结构学习路径'
 ]
+
+// 加载会话列表
+async function loadSessions() {
+  try {
+    const data = await fetchSessions(store.userId)
+    sessions.value = data || []
+  } catch (e) {
+    console.error('加载会话列表失败:', e)
+  }
+}
+
+// 格式化时间
+function formatTime(timeString) {
+  if (!timeString) return ''
+  const date = new Date(timeString)
+  const now = new Date()
+  const diffMs = now - date
+  const diffMins = Math.floor(diffMs / 60000)
+  const diffHours = Math.floor(diffMs / 3600000)
+  const diffDays = Math.floor(diffMs / 86400000)
+
+  if (diffMins < 1) return '刚刚'
+  if (diffMins < 60) return `${diffMins}分钟前`
+  if (diffHours < 24) return `${diffHours}小时前`
+  if (diffDays < 7) return `${diffDays}天前`
+  return date.toLocaleDateString('zh-CN')
+}
+
+// 加载指定会话
+async function loadSession(session) {
+  if (store.isStreaming) return
+  if (store.sessionId === session.id) return
+
+  try {
+    store.reset()
+    store.sessionId = session.id
+
+    const messages = await fetchSessionMessages(session.id)
+    if (messages && messages.length > 0) {
+      messages.forEach(msg => {
+        store.addMessage({
+          role: msg.role,
+          content: msg.content,
+          phase: msg.phase
+        })
+      })
+
+      // 检查是否已完成
+      const hasDone = messages.some(m => m.phase === 'done')
+      if (hasDone) {
+        store.currentPhase = 'done'
+        await loadDoneData()
+      }
+    }
+  } catch (e) {
+    console.error('加载会话失败:', e)
+  }
+}
 
 function scrollToBottom() {
   nextTick(() => {
@@ -144,6 +229,9 @@ async function handleSend(text) {
   await sendMessage(text)
   scrollToBottom()
 
+  // 刷新会话列表
+  await loadSessions()
+
   if (store.currentPhase === 'done') {
     await loadDoneData()
   }
@@ -155,10 +243,6 @@ function handleSelectOption(option) {
 
 function handleQuickPrompt(prompt) {
   handleSend(prompt)
-}
-
-function handleNewChat() {
-  store.reset()
 }
 
 function handleFocusTopic(topic) {
@@ -214,8 +298,52 @@ watch(() => store.selectedNodeId, async (nodeId) => {
   }
 })
 
-onMounted(() => {
+// 加载最近的会话
+async function loadRecentSession() {
+  try {
+    // 先加载会话列表
+    await loadSessions()
+    
+    if (sessions.value.length > 0) {
+      // 找到最近的活跃会话
+      const recentSession = sessions.value.find(s => s.status === 'active') || sessions.value[0]
+      store.sessionId = recentSession.id
+      
+      // 加载会话消息
+      const messages = await fetchSessionMessages(recentSession.id)
+      if (messages && messages.length > 0) {
+        // 清空现有消息，加载历史消息
+        store.messages = []
+        messages.forEach(msg => {
+          store.addMessage({
+            role: msg.role,
+            content: msg.content,
+            phase: msg.phase
+          })
+        })
+        
+        // 检查是否已完成
+        const hasDone = messages.some(m => m.phase === 'done')
+        if (hasDone) {
+          store.currentPhase = 'done'
+          await loadDoneData()
+        }
+      }
+    }
+  } catch (e) {
+    console.error('加载历史会话失败:', e)
+  }
+}
+
+// 新对话
+function handleNewChat() {
   store.reset()
+  // 刷新会话列表
+  loadSessions()
+}
+
+onMounted(async () => {
+  await loadRecentSession()
 })
 </script>
 
@@ -260,6 +388,74 @@ onMounted(() => {
   display: flex;
   overflow: hidden;
 }
+
+/* 侧边栏样式 */
+.sidebar {
+  width: 260px;
+  background: #fff;
+  border-right: 1px solid #e4e7ed;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.sidebar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  border-bottom: 1px solid #e4e7ed;
+}
+
+.sidebar-header h3 {
+  font-size: 15px;
+  color: #303133;
+  margin: 0;
+}
+
+.session-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.session-item {
+  padding: 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-bottom: 4px;
+  transition: background 0.2s;
+}
+
+.session-item:hover {
+  background: #f5f7fa;
+}
+
+.session-item.active {
+  background: #ecf5ff;
+  border: 1px solid #d9ecff;
+}
+
+.session-title {
+  font-size: 14px;
+  color: #303133;
+  margin-bottom: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.session-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.session-time {
+  font-size: 12px;
+  color: #c0c4cc;
+}
+
 .chat-main {
   flex: 1;
   display: flex;

@@ -1,11 +1,13 @@
 package com.exam.controller;
 
+import com.exam.service.agent.AgentOrchestrator;
 import com.exam.service.impl.AgentOrchestratorService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -20,6 +22,12 @@ public class AgentChatController {
     @Autowired
     private AgentOrchestratorService orchestratorService;
 
+    @Autowired
+    private AgentOrchestrator agentOrchestrator;
+
+    @Value("${agent.mode:legacy}")
+    private String agentMode;
+
     @PostMapping(value = "/chat", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     @Operation(summary = "AI对话（SSE流式）", description = "与AI Agent进行流式对话")
     public SseEmitter chat(@RequestBody ChatRequest request) {
@@ -31,7 +39,12 @@ public class AgentChatController {
 
         new Thread(() -> {
             try {
-                orchestratorService.handleChat(sessionId, message, userId, emitter);
+                // 默认使用多Agent架构
+                if ("legacy".equals(agentMode)) {
+                    orchestratorService.handleChat(sessionId, message, userId, emitter);
+                } else {
+                    agentOrchestrator.handleChat(sessionId, message, userId, emitter);
+                }
             } catch (Exception e) {
                 log.error("Chat处理失败", e);
                 try {

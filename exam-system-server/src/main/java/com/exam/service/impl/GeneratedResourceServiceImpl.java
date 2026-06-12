@@ -1,5 +1,6 @@
 package com.exam.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.exam.entity.GeneratedResource;
 import com.exam.mapper.GeneratedResourceMapper;
 import com.exam.service.GeneratedResourceService;
@@ -39,6 +40,14 @@ public class GeneratedResourceServiceImpl implements GeneratedResourceService {
     @Override
     public GeneratedResource getResourceById(Long id) {
         return generatedResourceMapper.selectById(id);
+    }
+
+    @Override
+    public List<GeneratedResource> getResourcesByTitle(String title) {
+        // 模糊匹配标题
+        LambdaQueryWrapper<GeneratedResource> wrapper = new LambdaQueryWrapper<>();
+        wrapper.like(GeneratedResource::getTitle, title);
+        return generatedResourceMapper.selectList(wrapper);
     }
 
     @Override

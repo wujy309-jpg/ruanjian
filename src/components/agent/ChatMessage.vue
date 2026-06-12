@@ -17,16 +17,19 @@
         <div v-else class="ai-text" v-html="renderedContent"></div>
       </div>
       <div class="message-options" v-if="options && options.length > 0">
-        <el-button
-          v-for="(opt, idx) in options"
-          :key="idx"
-          size="small"
-          type="primary"
-          plain
-          @click="$emit('select-option', opt)"
-        >
-          {{ opt }}
-        </el-button>
+        <div class="options-hint">快捷选择（也可以自由输入）：</div>
+        <div class="options-list">
+          <el-button
+            v-for="(opt, idx) in options"
+            :key="idx"
+            size="small"
+            type="primary"
+            plain
+            @click="$emit('select-option', opt)"
+          >
+            {{ opt }}
+          </el-button>
+        </div>
       </div>
       <div class="message-meta">
         <el-tag v-if="phase" size="small" type="info">{{ phaseLabel }}</el-tag>
@@ -141,10 +144,19 @@ function formatTime(date) {
   background: #f5f7fa;
 }
 .message-options {
+  padding: 8px 16px;
+}
+
+.options-hint {
+  font-size: 12px;
+  color: #909399;
+  margin-bottom: 8px;
+}
+
+.options-list {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  padding: 0 16px;
 }
 .message-meta {
   display: flex;

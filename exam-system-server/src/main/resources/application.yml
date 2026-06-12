@@ -80,6 +80,10 @@ minio:
 #     path: ./uploads/  # 本地文件存储路径
 #     url-prefix: http://localhost:8080/files/  # 文件访问URL前缀
 
+# Agent配置
+agent:
+  mode: multi  # legacy=旧单体模式, multi=新多Agent模式（默认）
+
 # Knife4j API文档配置  # 增强版API文档配置
 knife4j:
   enable: true  # 启用Knife4j增强功能

@@ -57,7 +57,12 @@ public class LlmClient {
         body.put("temperature", 0.7);
         body.put("max_tokens", 4000);
 
+        // 计算prompt长度用于日志
+        int promptLength = body.toJSONString().length();
+        log.info("LLM request - prompt length: {} chars, attempt: {}", promptLength, 3);
+
         for (int attempt = 1; attempt <= 3; attempt++) {
+            long startTime = System.currentTimeMillis();
             try {
                 String response = webClient.post()
                         .uri(baseUrl + "/chat/completions")
@@ -65,8 +70,11 @@ public class LlmClient {
                         .bodyValue(body.toJSONString())
                         .retrieve()
                         .bodyToMono(String.class)
-                        .timeout(Duration.ofSeconds(120))
+                        .timeout(Duration.ofSeconds(60))
                         .block();
+
+                long elapsed = System.currentTimeMillis() - startTime;
+                log.info("LLM response received in {} ms", elapsed);
 
                 JSONObject json = JSON.parseObject(response);
                 if (json.containsKey("error")) {

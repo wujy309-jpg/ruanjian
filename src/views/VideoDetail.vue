@@ -22,7 +22,17 @@
         <!-- 视频播放区域 -->
         <div class="video-player-section">
           <div class="video-player">
+            <!-- B站视频：显示封面和跳转按钮 -->
+            <div v-if="isBilibiliVideo" class="bilibili-player" @click="openBilibiliVideo">
+              <img :src="videoInfo.coverUrl" class="bilibili-cover" />
+              <div class="bilibili-play-btn">
+                <el-icon :size="60"><VideoPlay /></el-icon>
+                <span>点击前往B站观看</span>
+              </div>
+            </div>
+            <!-- 本地视频：直接播放 -->
             <video
+              v-else
               ref="videoPlayerRef"
               :src="videoInfo.fileUrl"
               :poster="videoInfo.coverUrl"
@@ -210,7 +220,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getVideoDetail, toggleVideoLike, recordVideoView, getPopularVideos } from '../api/video'
@@ -237,6 +247,18 @@ const lastRecordTime = ref(0)
 
 // 默认封面
 const defaultCover = '/images/default-video-cover.jpg'
+
+// 判断是否是B站视频
+const isBilibiliVideo = computed(() => {
+  return videoInfo.value?.fileUrl?.includes('bilibili.com')
+})
+
+// 打开B站视频
+const openBilibiliVideo = () => {
+  if (videoInfo.value?.fileUrl) {
+    window.open(videoInfo.value.fileUrl, '_blank')
+  }
+}
 
 // 生命周期
 onMounted(() => {
@@ -459,6 +481,46 @@ const formatTime = (timeString) => {
   width: 100%;
   height: 100%;
   object-fit: contain;
+}
+
+/* B站视频播放器 */
+.bilibili-player {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  overflow: hidden;
+  background: #000;
+}
+
+.bilibili-cover {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.7;
+  transition: opacity 0.3s;
+}
+
+.bilibili-player:hover .bilibili-cover {
+  opacity: 0.5;
+}
+
+.bilibili-play-btn {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  color: #fff;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+}
+
+.bilibili-play-btn span {
+  font-size: 16px;
+  font-weight: 500;
 }
 
 /* 视频信息区域 */
