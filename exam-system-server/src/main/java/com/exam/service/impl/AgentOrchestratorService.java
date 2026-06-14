@@ -267,16 +267,9 @@ public class AgentOrchestratorService {
                         .collect(Collectors.joining("\n"));
             }
 
-            // 并行生成三种资源，加快速度
-            final String finalKpInfo = kpInfo;
-            final PathNode finalNode = node;
-            CompletableFuture<Void> docFuture = CompletableFuture.runAsync(() ->
-                genResource(session.getId(), finalNode, "document", finalKpInfo), executorService);
-            CompletableFuture<Void> quizFuture = CompletableFuture.runAsync(() ->
-                genResource(session.getId(), finalNode, "quiz", finalKpInfo), executorService);
-            CompletableFuture<Void> mindmapFuture = CompletableFuture.runAsync(() ->
-                genResource(session.getId(), finalNode, "mindmap", finalKpInfo), executorService);
-            CompletableFuture.allOf(docFuture, quizFuture, mindmapFuture).join();
+            genResource(session.getId(), node, "document", kpInfo);
+            genResource(session.getId(), node, "quiz", kpInfo);
+            genResource(session.getId(), node, "mindmap", kpInfo);
         }
 
         saveMessage(session.getId(), "学习资料生成完成", "done");

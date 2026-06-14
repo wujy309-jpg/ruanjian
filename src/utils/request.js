@@ -32,7 +32,7 @@ request.interceptors.response.use(
     
     // 如果返回的状态码不是200，说明接口有问题，应该提示错误
     if (res.code !== 200) {
-      //ElMessage.error(res.message || '请求失败')
+      ElMessage.error(res.message || '请求失败')
       return Promise.reject(new Error(res.message || '请求失败'))
     }
     

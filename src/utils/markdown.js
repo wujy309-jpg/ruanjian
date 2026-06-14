@@ -12,7 +12,7 @@ const md = new MarkdownIt({
         return hljs.highlight(str, { language: lang }).value
       } catch (_) {}
     }
-    return ''
+    return md.utils.escapeHtml(str)
   }
 })
 

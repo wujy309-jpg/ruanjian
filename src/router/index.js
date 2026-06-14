@@ -78,15 +78,10 @@ const router = createRouter({
   routes
 })
 
-router.beforeEach((to, from, next) => {
+router.afterEach((to) => {
   if (to.meta.title) {
     document.title = to.meta.title + ' - AI云学智训平台'
   }
-  next()
-})
-
-router.afterEach((to) => {
-  document.title = to.meta.title + ' - AI云学智训平台'
 })
 
 export default router
