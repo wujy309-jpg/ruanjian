@@ -12,12 +12,16 @@ import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 @RestController
 @RequestMapping("/api/agent")
 @Tag(name = "Agent对话", description = "AI Agent对话接口")
 public class AgentChatController {
 
     private static final Logger log = LoggerFactory.getLogger(AgentChatController.class);
+    private static final ExecutorService executor = Executors.newFixedThreadPool(8);
 
     @Autowired
     private AgentOrchestratorService orchestratorService;
@@ -37,9 +41,8 @@ public class AgentChatController {
         String message = request.getMessage();
         Long userId = request.getUserId() != null ? request.getUserId() : 1L;
 
-        new Thread(() -> {
+        executor.execute(() -> {
             try {
-                // 默认使用多Agent架构
                 if ("legacy".equals(agentMode)) {
                     orchestratorService.handleChat(sessionId, message, userId, emitter);
                 } else {
@@ -49,10 +52,12 @@ public class AgentChatController {
                 log.error("Chat处理失败", e);
                 try {
                     emitter.send(SseEmitter.event().name("error").data("{\"message\":\"处理失败\"}"));
-                } catch (Exception ex) { /* ignore */ }
+                } catch (Exception ex) {
+                    log.error("SSE发送错误消息失败", ex);
+                }
                 emitter.complete();
             }
-        }).start();
+        });
 
         return emitter;
     }

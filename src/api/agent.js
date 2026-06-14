@@ -55,11 +55,31 @@ export async function sendMessage(userMessage) {
 function handleSSEEvent(event, data) {
   const store = useAgentStore()
 
+  if (event === 'error') {
+    store.isStreaming = false
+    store.addMessage({ role: 'assistant', content: '系统错误：' + (data.message || '未知错误，请稍后重试') })
+    return
+  }
+
   if (data.sessionId && !store.sessionId) {
     store.sessionId = data.sessionId
   }
 
-  if (event === 'phase') {
+  // 兼容新旧两种 SSE 事件格式
+  if (event === 'phase' || event === 'agent-event') {
+    // agent-event 格式转换
+    if (event === 'agent-event') {
+      if (data.type === 'stage') {
+        data = { phase: data.stage || 'orchestrating', content: { text: data.data }, progress: 0.1 }
+      } else if (data.type === 'decision') {
+        data = { phase: 'orchestrating', content: { text: '正在分析您的需求...' }, progress: 0.2 }
+      } else if (data.type === 'report') {
+        data = { phase: data.data?.stage || 'planning', content: { text: data.data?.summary || '正在处理...' }, progress: 0.5 }
+      } else if (data.type === 'done') {
+        data = { phase: 'done', content: {}, progress: 1.0 }
+      }
+    }
+
     const phase = data.phase
     store.setPhase(phase, data)
 

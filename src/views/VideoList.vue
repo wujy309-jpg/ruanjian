@@ -189,12 +189,13 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getVideos, getPopularVideos, getLatestVideos } from '../api/video'
 import { getTopVideoCategories } from '../api/videoCategory'
 import VideoSubmitForm from '../components/VideoSubmitForm.vue'
+import { formatNumber, formatTime, getVideoTags } from '../utils/format'
 
 const router = useRouter()
 
@@ -310,43 +311,6 @@ const handleSubmitSuccess = () => {
   ElMessage.success('视频投稿成功，请等待审核')
   // 刷新列表
   loadVideoList()
-}
-
-// 获取视频标签数组
-const getVideoTags = (tagsString) => {
-  if (!tagsString) return []
-  return tagsString.split(',').filter(tag => tag.trim()).slice(0, 3) // 最多显示3个标签
-}
-
-// 格式化数字
-const formatNumber = (num) => {
-  if (!num) return '0'
-  if (num < 1000) return num.toString()
-  if (num < 10000) return (num / 1000).toFixed(1) + 'k'
-  return (num / 10000).toFixed(1) + 'w'
-}
-
-// 格式化时间
-const formatTime = (timeString) => {
-  if (!timeString) return ''
-  const date = new Date(timeString)
-  const now = new Date()
-  const diff = now - date
-  
-  const minute = 60 * 1000
-  const hour = 60 * minute
-  const day = 24 * hour
-  const month = 30 * day
-  
-  if (diff < hour) {
-    return Math.floor(diff / minute) + '分钟前'
-  } else if (diff < day) {
-    return Math.floor(diff / hour) + '小时前'
-  } else if (diff < month) {
-    return Math.floor(diff / day) + '天前'
-  } else {
-    return date.toLocaleDateString()
-  }
 }
 
 // 处理排序变化

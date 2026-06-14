@@ -59,7 +59,7 @@ public class PlanAgent implements LearningAgent {
         try {
             // 方案1：使用拓扑排序算法生成基础路径
             AgentOutput algorithmResult = generatePathByAlgorithm(input);
-            if ("success".equals(algorithmResult.getStatus())) {
+            if (algorithmResult != null && "success".equals(algorithmResult.getStatus())) {
                 return algorithmResult;
             }
 

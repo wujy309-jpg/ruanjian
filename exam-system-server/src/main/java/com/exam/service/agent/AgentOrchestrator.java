@@ -149,6 +149,13 @@ public class AgentOrchestrator {
      * 处理画像结果
      */
     private void handleProfileResult(AgentSession session, AgentOutput output, String userMessage, SseEmitter emitter) throws Exception {
+        // 处理 LLM 调用失败的情况
+        if ("error".equals(output.getStatus()) || output.getStructuredData() == null) {
+            String errorMsg = output.getRawResponse() != null ? output.getRawResponse() : "AI 服务暂时不可用，请稍后重试";
+            sendError(emitter, errorMsg);
+            return;
+        }
+
         if ("complete".equals(output.getStatus())) {
             // 画像完成，保存并进入规划阶段
             JSONObject profileData = output.getStructuredData().has("profile")

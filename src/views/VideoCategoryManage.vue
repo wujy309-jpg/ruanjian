@@ -92,8 +92,6 @@ const getCategoryList = async () => {
   loading.value = true
   try {
     const res = await getCategoryTree()
-    console.log(91,res);
-
     categoryList.value = res.data
     const flatRes = await getVideoCategories()
     categoryTreeOptions.value = buildTreeOptions(flatRes.data)

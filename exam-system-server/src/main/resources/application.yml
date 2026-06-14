@@ -22,9 +22,9 @@ spring:
   # 数据库配置
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver  # MySQL驱动
-    url: jdbc:mysql://localhost:3306/exam_system?useUnicode=true&characterEncoding=utf8&allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=Asia/Shanghai  # 数据库连接URL
+    url: jdbc:mysql://127.0.0.1:3306/exam_system?useUnicode=true&characterEncoding=utf8&allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=Asia/Shanghai  # 数据库连接URL
     username: root  # 数据库用户名
-    password: 12345678  # 数据库密码
+    password: root123  # 数据库密码
   
   # Jackson配置
   jackson:
@@ -88,10 +88,10 @@ agent:
 knife4j:
   enable: true  # 启用Knife4j增强功能
   openapi:
-    title: 🎓 AI云学智讯平台API文档  # 文档标题
+    title: 🎓 AI云学智训平台API文档  # 文档标题
     description: 📚 基于Spring Boot + MyBatis Plus开发的智能考试系统  # 文档描述
     version: v1.0.0  # API版本
-    concat: 🏫 AI云学智讯平台开发团队  # 联系人信息
+    concat: 🏫 AI云学智训平台开发团队  # 联系人信息
   setting:
     language: zh_cn  # 界面语言设置为中文
     enable-version: true  # 启用版本控制

@@ -220,10 +220,11 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getVideoDetail, toggleVideoLike, recordVideoView, getPopularVideos } from '../api/video'
+import { formatNumber, formatTime, getVideoTags } from '../utils/format'
 
 const route = useRoute()
 const router = useRouter()
@@ -242,7 +243,6 @@ const qrCodeUrl = ref('')
 // 视频播放相关
 const videoPlayerRef = ref()
 const watchStartTime = ref(0)
-const totalWatchTime = ref(0)
 const lastRecordTime = ref(0)
 
 // 默认封面
@@ -264,6 +264,14 @@ const openBilibiliVideo = () => {
 onMounted(() => {
   loadVideoDetail()
   loadRelatedVideos()
+})
+
+// 监听路由参数变化，同路由跳转时重新加载
+watch(() => route.params.id, (newId, oldId) => {
+  if (newId && newId !== oldId) {
+    loadVideoDetail()
+    loadRelatedVideos()
+  }
 })
 
 onUnmounted(() => {
@@ -333,14 +341,14 @@ const onTimeUpdate = () => {
 const recordWatchTime = async () => {
   if (watchStartTime.value > 0) {
     const watchDuration = Math.floor((Date.now() - watchStartTime.value) / 1000)
-    totalWatchTime.value += watchDuration
-    
+    if (watchDuration <= 0) return
+
     try {
-      await recordVideoView(videoInfo.value.id, totalWatchTime.value)
+      await recordVideoView(videoInfo.value.id, watchDuration)
     } catch (error) {
       console.error('记录观看时长失败:', error)
     }
-    
+
     watchStartTime.value = Date.now()
   }
 }
@@ -392,8 +400,6 @@ const copyShareUrl = async () => {
 // 跳转到其他视频
 const goToVideo = (videoId) => {
   router.push(`/video/${videoId}`)
-  loadVideoDetail()
-  loadRelatedVideos()
 }
 
 // 返回列表
@@ -409,43 +415,6 @@ const searchByTag = (tag) => {
 // 获取上传者类型
 const getUploaderType = (type) => {
   return type === 2 ? 'success' : 'info'
-}
-
-// 获取视频标签
-const getVideoTags = (tagsString) => {
-  if (!tagsString) return []
-  return tagsString.split(',').filter(tag => tag.trim())
-}
-
-// 格式化数字
-const formatNumber = (num) => {
-  if (!num) return '0'
-  if (num < 1000) return num.toString()
-  if (num < 10000) return (num / 1000).toFixed(1) + 'k'
-  return (num / 10000).toFixed(1) + 'w'
-}
-
-// 格式化时间
-const formatTime = (timeString) => {
-  if (!timeString) return ''
-  const date = new Date(timeString)
-  const now = new Date()
-  const diff = now - date
-  
-  const minute = 60 * 1000
-  const hour = 60 * minute
-  const day = 24 * hour
-  const month = 30 * day
-  
-  if (diff < hour) {
-    return Math.floor(diff / minute) + '分钟前'
-  } else if (diff < day) {
-    return Math.floor(diff / hour) + '小时前'
-  } else if (diff < month) {
-    return Math.floor(diff / day) + '天前'
-  } else {
-    return date.toLocaleDateString()
-  }
 }
 </script>
 

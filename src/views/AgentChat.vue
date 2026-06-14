@@ -135,6 +135,7 @@ import { ref, watch, nextTick, onMounted } from 'vue'
 import { Plus, Cpu, Loading, Close } from '@element-plus/icons-vue'
 import { useAgentStore } from '@/stores/agent'
 import { sendMessage, fetchProfile, fetchLearningPathsByUser, fetchNodeResources, fetchSessions, fetchSessionMessages } from '@/api/agent'
+import { formatTime } from '@/utils/format'
 import ChatMessage from '@/components/agent/ChatMessage.vue'
 import ChatInput from '@/components/agent/ChatInput.vue'
 import PhaseIndicator from '@/components/agent/PhaseIndicator.vue'
@@ -164,23 +165,6 @@ async function loadSessions() {
   } catch (e) {
     console.error('加载会话列表失败:', e)
   }
-}
-
-// 格式化时间
-function formatTime(timeString) {
-  if (!timeString) return ''
-  const date = new Date(timeString)
-  const now = new Date()
-  const diffMs = now - date
-  const diffMins = Math.floor(diffMs / 60000)
-  const diffHours = Math.floor(diffMs / 3600000)
-  const diffDays = Math.floor(diffMs / 86400000)
-
-  if (diffMins < 1) return '刚刚'
-  if (diffMins < 60) return `${diffMins}分钟前`
-  if (diffHours < 24) return `${diffHours}小时前`
-  if (diffDays < 7) return `${diffDays}天前`
-  return date.toLocaleDateString('zh-CN')
 }
 
 // 加载指定会话
@@ -295,6 +279,16 @@ function getResourceContent(type) {
 watch(() => store.selectedNodeId, async (nodeId) => {
   if (nodeId) {
     await loadNodeResources(nodeId)
+  }
+})
+
+// profiling 阶段完成后立即拉取画像数据
+watch(() => store.currentPhase, async (newPhase, oldPhase) => {
+  if (oldPhase === 'profiling' && newPhase !== 'profiling' && !store.profile) {
+    const profile = await fetchProfile(store.userId)
+    if (profile) {
+      store.setProfile(profile)
+    }
   }
 })
 

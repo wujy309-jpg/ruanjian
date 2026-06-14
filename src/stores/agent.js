@@ -29,9 +29,11 @@ export const useAgentStore = defineStore('agent', () => {
 
   const isDone = computed(() => currentPhase.value === 'done')
 
+  let _msgSeq = 0
+
   function addMessage(msg) {
     messages.value.push({
-      id: Date.now(),
+      id: `${Date.now()}-${++_msgSeq}`,
       timestamp: new Date(),
       ...msg
     })
