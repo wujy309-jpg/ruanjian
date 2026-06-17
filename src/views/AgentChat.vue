@@ -1,36 +1,43 @@
 <template>
   <div class="agent-chat-page">
-    <!-- Sidebar -->
-    <aside class="chat-sidebar">
-      <div class="sidebar-header">
-        <h3>对话</h3>
-        <button class="apple-btn apple-btn-icon" @click="handleNewChat" :disabled="store.isStreaming" title="新对话">
-          <el-icon :size="18"><Plus /></el-icon>
-        </button>
-      </div>
-      <div class="session-list">
-        <div
-          v-for="session in sessions"
-          :key="session.id"
-          :class="['session-item', { active: store.sessionId === session.id }]"
-          @click="loadSession(session)"
-        >
-          <div class="session-info">
-            <p class="session-title">{{ session.title || '新对话' }}</p>
-            <p class="session-time">{{ formatTime(session.createdAt) }}</p>
-          </div>
-          <button class="session-delete" @click.stop="handleDeleteSession(session)" title="删除">
-            <el-icon :size="14"><Delete /></el-icon>
+    <!-- 历史记录切换按钮 -->
+    <button class="history-toggle" @click="showHistory = !showHistory" :class="{ active: showHistory }">
+      <el-icon><Fold v-if="showHistory" /><Expand v-else /></el-icon>
+    </button>
+
+    <!-- Sidebar - 历史记录面板 -->
+    <transition name="slide">
+      <aside class="chat-sidebar" v-show="showHistory">
+        <div class="sidebar-header">
+          <h3>历史对话</h3>
+          <button class="apple-btn apple-btn-icon" @click="handleNewChat" :disabled="store.isStreaming" title="新对话">
+            <el-icon :size="18"><Plus /></el-icon>
           </button>
         </div>
-        <div v-if="sessions.length === 0" class="session-empty">
-          <p>暂无对话记录</p>
+        <div class="session-list">
+          <div
+            v-for="session in sessions"
+            :key="session.id"
+            :class="['session-item', { active: store.sessionId === session.id }]"
+            @click="loadSession(session)"
+          >
+            <div class="session-info">
+              <p class="session-title">{{ session.title || '新对话' }}</p>
+              <p class="session-time">{{ formatTime(session.createdAt) }}</p>
+            </div>
+            <button class="session-delete" @click.stop="handleDeleteSession(session)" title="删除">
+              <el-icon :size="14"><Delete /></el-icon>
+            </button>
+          </div>
+          <div v-if="sessions.length === 0" class="session-empty">
+            <p>暂无对话记录</p>
+          </div>
         </div>
-      </div>
-    </aside>
+      </aside>
+    </transition>
 
     <!-- Main Chat Area -->
-    <main class="chat-main">
+    <main class="chat-main" :class="{ 'sidebar-collapsed': !showHistory }">
       <!-- Chat Header -->
       <header class="chat-header">
         <div class="header-left">
@@ -84,7 +91,7 @@
             </div>
           </div>
           <div class="message-bubble">
-            <p class="message-text">{{ msg.content }}</p>
+            <p class="message-text">{{ getMessageText(msg.content) }}</p>
             <span v-if="msg.options" class="message-options">
               <button
                 v-for="opt in msg.options"
@@ -165,7 +172,7 @@
 
 <script setup>
 import { ref, watch, nextTick, onMounted } from 'vue'
-import { Plus, Cpu, Close, Delete, Promotion } from '@element-plus/icons-vue'
+import { Plus, Cpu, Close, Delete, Promotion, Fold, Expand } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useAgentStore } from '@/stores/agent'
 import { sendMessage, fetchProfile, fetchLearningPathsByUser, fetchNodeResources, fetchSessions, fetchSessionMessages } from '@/api/agent'
@@ -184,6 +191,7 @@ const messagesRef = ref(null)
 const activeResourceTab = ref('path')
 const sessions = ref([])
 const inputText = ref('')
+const showHistory = ref(false)
 
 const quickPrompts = [
   '我想学Java',
@@ -198,6 +206,24 @@ const resourceTabs = [
   { key: 'quiz', label: '练习题' },
   { key: 'mindmap', label: '思维导图' }
 ]
+
+// 解析消息内容，提取显示文本
+function getMessageText(content) {
+  if (!content) return ''
+  
+  // 尝试解析JSON
+  try {
+    const parsed = JSON.parse(content)
+    // 如果是JSON对象，提取text字段
+    if (parsed && typeof parsed === 'object') {
+      return parsed.text || parsed.content || content
+    }
+  } catch (e) {
+    // 不是JSON，直接返回原内容
+  }
+  
+  return content
+}
 
 async function loadSessions() {
   try {
@@ -379,6 +405,52 @@ onMounted(async () => {
   height: 100vh;
   display: flex;
   background: var(--color-bg-grouped);
+  position: relative;
+}
+
+/* ===== History Toggle Button ===== */
+.history-toggle {
+  position: fixed;
+  left: 276px;
+  top: 80px;
+  z-index: 100;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: none;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--apple-text-secondary);
+  transition: all 0.2s ease;
+}
+
+.history-toggle:hover {
+  background: rgba(255, 255, 255, 0.95);
+  color: var(--apple-text-primary);
+  transform: scale(1.05);
+}
+
+.history-toggle.active {
+  background: var(--apple-blue);
+  color: white;
+}
+
+/* ===== Slide Transition ===== */
+.slide-enter-active,
+.slide-leave-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.slide-enter-from,
+.slide-leave-to {
+  transform: translateX(-100%);
+  opacity: 0;
 }
 
 /* ===== Sidebar ===== */
@@ -386,8 +458,16 @@ onMounted(async () => {
   width: 280px;
   display: flex;
   flex-direction: column;
-  background: var(--color-surface);
-  border-right: 0.5px solid var(--color-separator);
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-right: 0.5px solid var(--apple-border);
+  position: fixed;
+  top: 0;
+  left: 260px;
+  bottom: 0;
+  z-index: 90;
+  box-shadow: 2px 0 12px rgba(0, 0, 0, 0.05);
 }
 
 .sidebar-header {
@@ -485,6 +565,7 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .chat-header {
