@@ -29,14 +29,23 @@
         </div>
       </div>
 
-      <!-- 空状态 -->
-      <div v-if="!loading && pathList.length === 0" class="empty-state">
+      <!-- 诊断问卷 -->
+      <div v-if="showQuiz" class="quiz-wrapper">
+        <DiagnosticQuiz
+          @complete="handleQuizComplete"
+          @load-courses="handleLoadCourses"
+          :courses="courseList"
+        />
+      </div>
+
+      <!-- 空状态（无路径且未开始问卷） -->
+      <div v-if="!loading && pathList.length === 0 && !showQuiz && !diagnosticLoading" class="empty-state">
         <el-empty description="还没有学习路径">
           <template #description>
-            <p>还没有学习路径</p>
-            <p class="empty-tip">前往「智能对话」与 AI 交流，自动生成你的专属学习路径</p>
+            <p>还没有学习路径，先做个诊断吧</p>
+            <p class="empty-tip">回答几个问题，AI 会为你生成专属学习路径</p>
           </template>
-          <el-button type="primary" @click="$router.push('/chat')">去智能对话</el-button>
+          <el-button type="primary" @click="showQuiz = true">开始诊断</el-button>
         </el-empty>
       </div>
 
@@ -65,12 +74,15 @@
               </div>
             </div>
           </div>
-          <el-progress
-            type="circle"
-            :percentage="progressPercent"
-            :width="100"
-            color="#409eff"
-          />
+          <div class="overview-actions">
+            <el-progress
+              type="circle"
+              :percentage="progressPercent"
+              :width="100"
+              color="var(--primary)"
+            />
+            <el-button size="small" text @click="reassess">重新评估</el-button>
+          </div>
         </div>
 
         <!-- 节点时间线 -->
@@ -222,8 +234,11 @@
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import AppNavbar from '../components/AppNavbar.vue'
+import DiagnosticQuiz from '../components/DiagnosticQuiz.vue'
 import { useAuthStore } from '../stores/auth'
 import { getUserPaths, getPathDetail, updateNodeStatus } from '../api/learningPath'
+import { profileFromDiagnostic } from '../api/agent'
+import { getCourses } from '../api/knowledge'
 
 const authStore = useAuthStore()
 
@@ -233,6 +248,9 @@ const currentPathId = ref(null)
 const currentPath = ref(null)
 const resourceDialogVisible = ref(false)
 const currentResource = ref(null)
+const showQuiz = ref(false)
+const diagnosticLoading = ref(false)
+const courseList = ref([])
 
 const totalEstimatedMinutes = computed(() => {
   if (!currentPath.value?.nodes) return 0
@@ -308,6 +326,10 @@ const loadPaths = async () => {
     pathList.value = res.data || []
     if (pathList.value.length > 0) {
       await loadPathDetail(pathList.value[0].id)
+    } else {
+      // 无路径时自动弹出诊断问卷
+      await handleLoadCourses()
+      showQuiz.value = true
     }
   } catch (e) {
     console.error('加载路径失败', e)
@@ -339,6 +361,40 @@ const changeNodeStatus = async (node, status) => {
   } catch (e) {
     ElMessage.error('更新失败')
   }
+}
+
+const handleLoadCourses = async () => {
+  try {
+    const res = await getCourses()
+    courseList.value = res.data || []
+  } catch (e) {
+    console.error('加载课程失败', e)
+  }
+}
+
+const handleQuizComplete = async (payload) => {
+  showQuiz.value = false
+  diagnosticLoading.value = true
+  try {
+    const res = await profileFromDiagnostic({
+      userId: authStore.userId,
+      diagnosticText: payload.diagnosticText
+    })
+    // 重新加载路径列表
+    await loadPaths()
+    ElMessage.success('学习路径已生成！')
+  } catch (e) {
+    ElMessage.error('生成路径失败，请重试')
+    console.error(e)
+  } finally {
+    diagnosticLoading.value = false
+  }
+}
+
+const reassess = () => {
+  showQuiz.value = true
+  currentPath.value = null
+  currentPathId.value = null
 }
 
 onMounted(() => {
@@ -384,8 +440,12 @@ onMounted(() => {
 .empty-state { background: var(--bg-card); border-radius: var(--radius-lg); padding: var(--space-3xl) var(--space-lg); text-align: center; box-shadow: var(--shadow-sm); border: 1px solid var(--border); }
 .empty-tip { color: var(--text-secondary); font-size: var(--fs-sm); margin-top: var(--space-xs); }
 
+/* 诊断问卷 */
+.quiz-wrapper { background: var(--bg-card); border-radius: var(--radius-lg); padding: var(--space-lg); box-shadow: var(--shadow-sm); border: 1px solid var(--border); }
+
 /* 概览卡片 */
 .overview-card { background: var(--bg-card); border-radius: var(--radius-lg); padding: var(--space-lg); margin-bottom: var(--space-lg); display: flex; justify-content: space-between; align-items: center; box-shadow: var(--shadow-sm); border: 1px solid var(--border); }
+.overview-actions { display: flex; flex-direction: column; align-items: center; gap: var(--space-sm); }
 .overview-info h2 { font-size: var(--fs-2xl); color: var(--text-primary); margin: 0 0 var(--space-md); }
 .overview-stats { display: flex; gap: var(--space-xl); }
 .stat { display: flex; flex-direction: column; }

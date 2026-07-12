@@ -133,4 +133,62 @@ public class AgentChatController {
         public Long getUserId() { return userId; }
         public void setUserId(Long userId) { this.userId = userId; }
     }
+
+    /**
+     * 从诊断问卷创建画像 + 完整学习路径（同步，非SSE）
+     * 前端问卷完成后调用此接口
+     */
+    @PostMapping("/profile-from-diagnostic")
+    @Operation(summary = "问卷诊断建画像", description = "接受诊断问卷答案，创建画像后自动走完agent链")
+    public Result<?> profileFromDiagnostic(@RequestBody Map<String, Object> request) {
+        Long userId = Long.valueOf(request.getOrDefault("userId", 1).toString());
+        String diagnosticText = request.getOrDefault("diagnosticText", "").toString();
+
+        if (diagnosticText.isBlank()) {
+            return Result.error("诊断信息不能为空");
+        }
+
+        try {
+            // 创建新 session（以诊断文本摘要为标题）
+            AgentSession newSession = new AgentSession();
+            newSession.setUserId(userId);
+            newSession.setTitle(diagnosticText.length() > 50
+                    ? diagnosticText.substring(0, 50) + "..." : diagnosticText);
+            newSession.setStatus("active");
+            AgentSession created = sessionService.createSession(newSession);
+            Long sessionId = created.getId();
+
+            // 构建携带诊断文本的输入，直接走 Orchestrator 链
+            // 把诊断文本作为 userMessage，Orchestrator 会走 ProfileAgent → PlanAgent → GenAgent
+            List<AgentOutput> outputs = orchestrator.processMessage(userId, sessionId, diagnosticText);
+
+            return Result.success(Map.of(
+                    "sessionId", sessionId,
+                    "outputs", outputs.stream().map(o -> Map.of(
+                            "phase", o.getPhase(),
+                            "message", o.getMessage(),
+                            "completed", o.isCompleted(),
+                            "data", o.getData(),
+                            "suggestions", o.getSuggestions()
+                    )).toList()
+            ));
+        } catch (Exception e) {
+            return Result.error("处理诊断信息出错: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 检查用户是否有活跃的画像和路径
+     */
+    @GetMapping("/status")
+    @Operation(summary = "检查用户agent状态", description = "返回用户是否有活跃的agent session和路径")
+    public Result<?> getAgentStatus(@RequestParam Long userId) {
+        List<AgentSession> sessions = sessionService.getSessionsByUser(userId);
+        boolean hasActiveSession = sessions.stream().anyMatch(s -> "active".equals(s.getStatus()));
+        return Result.success(Map.of(
+                "hasActiveSession", hasActiveSession,
+                "activeSessionCount", sessions.stream().filter(s -> "active".equals(s.getStatus())).count(),
+                "totalSessions", sessions.size()
+        ));
+    }
 }

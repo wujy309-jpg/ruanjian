@@ -44,15 +44,8 @@
               <div class="phase-line" v-if="index < phases.length - 1"></div>
             </div>
           </div>
-          <div class="mode-toggle">
-            <el-switch
-              v-model="chatMode"
-              active-value="rag"
-              inactive-value="agent"
-              active-text="RAG问答"
-              inactive-text="Agent规划"
-              size="small"
-            />
+          <div class="mode-indicator">
+            <el-tag size="small" type="info" effect="plain">知识问答</el-tag>
           </div>
         </div>
 
@@ -177,36 +170,38 @@
         </div>
 
         <div class="input-area">
-          <div class="mode-bar" v-if="!messages.length && !currentPhase">
-            <el-switch
-              v-model="chatMode"
-              active-value="rag"
-              inactive-value="agent"
-              active-text="RAG问答（基于知识库）"
-              inactive-text="Agent规划（多智能体）"
-              size="small"
-            />
-          </div>
           <div class="input-wrapper">
             <el-input
               v-model="inputMessage"
               type="textarea"
               :rows="1"
-              :placeholder="chatMode === 'rag' ? '输入你的问题（基于知识库回答）...' : '输入你的问题...'"
+              placeholder="输入你想学的内容..."
               resize="none"
               @keydown.enter.exact.prevent="handleSend"
               :disabled="aiTyping"
             />
-            <el-button
-              type="primary"
-              @click="handleSend"
-              :loading="aiTyping"
-              :disabled="!inputMessage.trim()"
-              :icon="Promotion"
-              circle
-            />
+            <div class="input-actions">
+              <el-tooltip content="生成个性化学习路径" placement="top">
+                <el-button
+                  size="default"
+                  @click="handleStartPlanning"
+                  :disabled="aiTyping"
+                  :icon="Guide"
+                >
+                  规划路径
+                </el-button>
+              </el-tooltip>
+              <el-button
+                type="primary"
+                @click="handleSend"
+                :loading="aiTyping"
+                :disabled="!inputMessage.trim()"
+                :icon="Promotion"
+                circle
+              />
+            </div>
           </div>
-          <p class="input-hint">{{ chatMode === 'rag' ? '基于数据库内容回答，附带来源引用' : '按 Enter 发送，Shift + Enter 换行' }}</p>
+          <p class="input-hint">基于知识库回答，附带来源引用 · 点击「规划路径」生成个性化学习方案</p>
         </div>
       </main>
     </div>
@@ -236,7 +231,7 @@ const aiTyping = ref(false)
 const currentPhase = ref('')
 const messageListRef = ref(null)
 const agentData = ref({ profiling: null, planning: null, generating: null })
-const chatMode = ref('agent')
+const planningMode = ref(false)
 
 const phases = [
   { key: 'profiling', label: '了解学情' },
@@ -248,9 +243,9 @@ const phaseOrder = (key) => phases.findIndex(p => p.key === key)
 const phaseLabel = (key) => phases.find(p => p.key === key)?.label || key
 
 const initialSuggestions = [
-  '我想学习 Java 面向对象编程',
-  '帮我规划 Python 入门学习路径',
-  '我需要复习数据结构的基础知识'
+  'Python 列表推导式怎么用',
+  'Java 面向对象三大特性是什么',
+  '什么是动态规划'
 ]
 
 const formatTime = (timeString) => {
@@ -358,19 +353,28 @@ const hasResults = computed(() =>
 const handleSend = async () => {
   const text = inputMessage.value.trim()
   if (!text || aiTyping.value) return
+  await handleRagQuery(text)
+}
 
-  if (chatMode.value === 'rag') {
-    return await handleRagQuery(text)
+const handleStartPlanning = async () => {
+  const text = inputMessage.value.trim()
+  if (!text) {
+    ElMessage.info('请先描述你想学习的内容')
+    return
   }
+  if (aiTyping.value) return
 
   if (!currentSessionId.value) {
     await handleNewSession()
   }
 
+  planningMode.value = true
+  agentData.value = { profiling: null, planning: null, generating: null }
+
   messages.value.push({
     id: Date.now(),
     role: 'user',
-    content: text,
+    content: '📋 ' + text,
     phase: null
   })
   inputMessage.value = ''
@@ -406,7 +410,7 @@ const handleSend = async () => {
       buffer = lines.pop() || ''
 
       for (const line of lines) {
-          if (line.startsWith('data:')) {
+        if (line.startsWith('data:')) {
           const data = line.substring(5).trim()
           if (data === '[DONE]') continue
           try {
@@ -437,7 +441,7 @@ const handleSend = async () => {
     }
     await scrollToBottom()
   } catch (e) {
-    ElMessage.error('发送失败，请重试')
+    ElMessage.error('规划失败，请重试')
     messages.value = messages.value.filter(m => m.role !== 'assistant' || m.content)
   } finally {
     aiTyping.value = false
@@ -555,8 +559,7 @@ onMounted(() => {
 .phase-item.active .phase-label, .phase-item.done .phase-label { color: var(--text-primary); font-weight: var(--fw-medium); }
 .phase-line { flex: 1; height: 2px; background: var(--border); margin: 0 var(--space-sm); }
 .phase-item.done .phase-line { background: var(--success); }
-.mode-toggle { display: flex; justify-content: flex-end; padding-top: var(--space-xs); }
-.mode-bar { display: flex; justify-content: center; padding: var(--space-sm) 0; border-bottom: 1px solid var(--border); background: var(--bg-subtle); }
+.mode-indicator { display: flex; justify-content: flex-end; padding-top: var(--space-xs); }
 
 /* Message list */
 .message-list { flex: 1; overflow-y: auto; padding: var(--space-lg); }
@@ -652,6 +655,8 @@ onMounted(() => {
 .input-wrapper .el-input :deep(.el-textarea__inner)::placeholder {
   font-size: var(--fs-base);
 }
+.input-actions { display: flex; gap: var(--space-xs); align-items: center; flex-shrink: 0; }
+.input-actions .el-button:not(.is-circle) { white-space: nowrap; }
 .input-hint { font-size: 11px; color: var(--text-tertiary); margin: 2px 0 0; text-align: right; opacity: 0.6; }
 
 @media (max-width: 768px) {
